@@ -1,5 +1,6 @@
 import requests
 import json
+import os
 
 def emotion_detector(text_to_analyze):
     # Check for blank input first
@@ -13,7 +14,7 @@ def emotion_detector(text_to_analyze):
             'dominant_emotion': None
         }
     
-    url = 'https://sn-watson-emotion.labs.skills.network/v1/watson.runtime.nlp.v1/NlpService/EmotionPredict'
+    url = os.environ.get('WATSON_EMOTION_API_URL', 'https://sn-watson-emotion.labs.skills.network/v1/watson.runtime.nlp.v1/NlpService/EmotionPredict')
     headers = {"grpc-metadata-mm-model-id": "emotion_aggregated-workflow_lang_en_stock"}
     myobj = {"raw_document": {"text": text_to_analyze}}
     
