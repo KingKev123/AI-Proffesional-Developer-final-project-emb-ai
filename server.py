@@ -4,9 +4,21 @@ This module provides a web interface for detecting emotions in text using Watson
 """
 
 from flask import Flask, render_template, request
+from flask_cors import CORS
 from EmotionDetection import emotion_detector
 
 app = Flask(__name__)
+CORS(app, origins="*")
+
+@app.after_request
+def add_security_headers(response):
+    """Add security headers to all responses."""
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
 
 
 @app.route("/")
@@ -56,4 +68,4 @@ def emotion_detector_app():
 if __name__ == "__main__":
     import os
     port = int(os.environ.get('PORT', 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=False)
