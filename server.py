@@ -41,6 +41,9 @@ def emotion_detector_app():
     For invalid input, returns error message.
     
     Returns:
+        if (!request.body || typeof request.body !== "object") {
+          return reply.code(400).send({ error: "Invalid request body" });
+        }
         str: Formatted emotion analysis result or error message
     """
     # Get the text from the request arguments
@@ -68,4 +71,7 @@ def emotion_detector_app():
 if __name__ == "__main__":
     import os
     port = int(os.environ.get('PORT', 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 'yes')
+    if debug_mode and os.environ.get('FLASK_ENV') == 'production':
+        raise RuntimeError("Debug mode cannot be enabled in production environment")
+    app.run(host="0.0.0.0", port=port, debug=debug_mode)
