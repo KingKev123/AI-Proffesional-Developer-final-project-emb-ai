@@ -64,13 +64,9 @@ def emotion_detector(text_to_analyze):
             'dominant_emotion': dominant_emotion
         }
         
-    except (requests.exceptions.RequestException, json.JSONDecodeError, KeyError, IndexError):
-        # Handle any errors - API down, bad response, missing keys
-        return {
-            'anger': None,
-            'disgust': None,
-            'fear': None,
-            'joy': None,
-            'sadness': None,
-            'dominant_emotion': None
-        }
+    except requests.exceptions.RequestException as e:
+        raise RuntimeError(f"Failed to connect to emotion detection API: {str(e)}")
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON response from API: {str(e)}")
+    except (KeyError, IndexError) as e:
+        raise ValueError(f"Unexpected API response structure: {str(e)}")
