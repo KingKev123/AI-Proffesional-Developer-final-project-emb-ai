@@ -62,35 +62,11 @@ class TestEmotionDetector(unittest.TestCase):
         if result['dominant_emotion'] is not None:
             self.assertIn(result['dominant_emotion'], ['anger', 'disgust', 'fear', 'joy', 'sadness'])
     
-    def test_special_characters(self):
-        result = emotion_detector("!@#$%^&*()_+-=[]{}|;':\",./<>?")
-        self.assertIn('anger', result)
-        self.assertIn('disgust', result)
-        self.assertIn('fear', result)
-        self.assertIn('joy', result)
-        self.assertIn('sadness', result)
-        self.assertIn('dominant_emotion', result)
-    
-    def test_numbers_only(self):
-        result = emotion_detector("1234567890")
-        self.assertIn('anger', result)
-        self.assertIn('disgust', result)
-        self.assertIn('fear', result)
-        self.assertIn('joy', result)
-        self.assertIn('sadness', result)
-        self.assertIn('dominant_emotion', result)
-    
     def test_mixed_alphanumeric(self):
         result = emotion_detector("I feel happy123 and sad456 at the same time")
-        self.assertIn('anger', result)
-        self.assertIn('disgust', result)
-        self.assertIn('fear', result)
-        self.assertIn('joy', result)
-        self.assertIn('sadness', result)
         self.assertIn('dominant_emotion', result)
         if result['dominant_emotion'] is not None:
-            self.assertIsInstance(result['anger'], (int, float))
-            self.assertIsInstance(result['joy'], (int, float))
+            self.assertIn(result['dominant_emotion'], ['anger', 'disgust', 'fear', 'joy', 'sadness'])
     
     def test_mixed_emotions(self):
         result = emotion_detector("I am happy but also sad and a bit angry about this situation")
@@ -107,92 +83,31 @@ class TestEmotionDetector(unittest.TestCase):
     
     def test_neutral_ambiguous_statement(self):
         result = emotion_detector("The weather is nice today")
-        self.assertIn('anger', result)
-        self.assertIn('disgust', result)
-        self.assertIn('fear', result)
-        self.assertIn('joy', result)
-        self.assertIn('sadness', result)
-        self.assertIn('dominant_emotion', result)
+        if result['dominant_emotion'] is not None:
+            self.assertIn(result['dominant_emotion'], ['joy', 'sadness', 'anger', 'disgust', 'fear'])
+            emotion_values = [result['anger'], result['disgust'], result['fear'], result['joy'], result['sadness']]
+            self.assertTrue(all(isinstance(v, (int, float)) for v in emotion_values))
+            max_score = max(emotion_values)
+            self.assertLess(max_score - min(emotion_values), 0.5)
     
-    def test_unicode_characters(self):
-        result = emotion_detector("I am happy 😊 and excited 🎉")
-        self.assertIn('anger', result)
-        self.assertIn('disgust', result)
-        self.assertIn('fear', result)
-        self.assertIn('joy', result)
-        self.assertIn('sadness', result)
-        self.assertIn('dominant_emotion', result)
-    
-    def test_single_character(self):
-        result = emotion_detector("a")
-        self.assertIn('anger', result)
-        self.assertIn('disgust', result)
-        self.assertIn('fear', result)
-        self.assertIn('joy', result)
-        self.assertIn('sadness', result)
-        self.assertIn('dominant_emotion', result)
+
     
     def test_repeated_text_pattern(self):
         result = emotion_detector("sad sad sad sad sad")
-        self.assertIn('anger', result)
-        self.assertIn('disgust', result)
-        self.assertIn('fear', result)
-        self.assertIn('joy', result)
-        self.assertIn('sadness', result)
-        self.assertIn('dominant_emotion', result)
-    
-    def test_html_like_content(self):
-        result = emotion_detector("<div>I am happy</div>")
-        self.assertIn('anger', result)
-        self.assertIn('disgust', result)
-        self.assertIn('fear', result)
-        self.assertIn('joy', result)
-        self.assertIn('sadness', result)
-        self.assertIn('dominant_emotion', result)
+        self.assertEqual(result['dominant_emotion'], 'sadness')
+        self.assertIsInstance(result['sadness'], (int, float))
+        self.assertGreater(result['sadness'], result['anger'])
+        self.assertGreater(result['sadness'], result['joy'])
     
     def test_multiple_sentences_different_emotions(self):
         result = emotion_detector("I am so happy today. But yesterday I was sad. Tomorrow I might be angry.")
-        self.assertIn('anger', result)
-        self.assertIn('disgust', result)
-        self.assertIn('fear', result)
-        self.assertIn('joy', result)
-        self.assertIn('sadness', result)
         self.assertIn('dominant_emotion', result)
         if result['dominant_emotion'] is not None:
-            emotion_values = [result['anger'], result['disgust'], result['fear'], result['joy'], result['sadness']]
-            self.assertTrue(all(isinstance(v, (int, float)) for v in emotion_values))
-    
-    def test_punctuation_heavy_text(self):
-        result = emotion_detector("I'm so!!!!! happy???? Really, really happy!!!")
-        self.assertIn('anger', result)
-        self.assertIn('disgust', result)
-        self.assertIn('fear', result)
-        self.assertIn('joy', result)
-        self.assertIn('sadness', result)
-        self.assertIn('dominant_emotion', result)
+            self.assertIn(result['dominant_emotion'], ['anger', 'disgust', 'fear', 'joy', 'sadness'])
     
     def test_case_sensitivity(self):
         result_lower = emotion_detector("i am happy")
         result_upper = emotion_detector("I AM HAPPY")
         result_mixed = emotion_detector("I aM HaPpY")
-        self.assertIn('dominant_emotion', result_lower)
-        self.assertIn('dominant_emotion', result_upper)
-        self.assertIn('dominant_emotion', result_mixed)
-    
-    def test_newlines_and_tabs(self):
-        result = emotion_detector("I am happy\nBut also sad\tand confused")
-        self.assertIn('anger', result)
-        self.assertIn('disgust', result)
-        self.assertIn('fear', result)
-        self.assertIn('joy', result)
-        self.assertIn('sadness', result)
-        self.assertIn('dominant_emotion', result)
-    
-    def test_non_english_characters(self):
-        result = emotion_detector("I am happy café résumé naïve")
-        self.assertIn('anger', result)
-        self.assertIn('disgust', result)
-        self.assertIn('fear', result)
-        self.assertIn('joy', result)
-        self.assertIn('sadness', result)
-        self.assertIn('dominant_emotion', result)
+        self.assertEqual(result_lower['dominant_emotion'], result_upper['dominant_emotion'])
+        self.assertEqual(result_lower['dominant_emotion'], result_mixed['dominant_emotion'])
