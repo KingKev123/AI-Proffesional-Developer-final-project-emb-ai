@@ -7,7 +7,7 @@ let RunSentimentAnalysis = ()=>{
           return reply.code(400).send({ error: "Invalid request body" });
         }
         if (this.readyState == 4 && this.status == 200) {
-            document.getElementById("system_response").innerHTML = xhttp.responseText;
+            document.getElementById("system_response").textContent = xhttp.responseText;
         }
     };
     xhttp.open("GET", "emotionDetector?textToAnalyze"+"="+textToAnalyze, true);
