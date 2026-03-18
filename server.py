@@ -47,9 +47,6 @@ def emotion_detector_app():
         str: Formatted emotion analysis result or error message
     """
     # Get the text from the request arguments
-    if (!request.body || typeof request.body !== "object") {
-      return reply.code(400).send({ error: "Invalid request body" });
-    }
     text_to_analyze = request.args.get('textToAnalyze')
 
     # Call the emotion detector function
@@ -74,7 +71,14 @@ def emotion_detector_app():
 if __name__ == "__main__":
     import os
     port = int(os.environ.get('PORT', 5000))
-    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 'yes')
-    if debug_mode and os.environ.get('FLASK_ENV') == 'production':
-        raise RuntimeError("Debug mode cannot be enabled in production environment")
+    is_production = any([
+        os.environ.get('FLASK_ENV') == 'production',
+        os.environ.get('ENV') == 'production',
+        os.environ.get('ENVIRONMENT') == 'production',
+        os.environ.get('PYTHON_ENV') == 'production'
+    ])
+    if is_production:
+        debug_mode = False
+    else:
+        debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 'yes')
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
