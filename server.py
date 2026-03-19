@@ -47,6 +47,9 @@ def emotion_detector_app():
         str: Formatted emotion analysis result or error message
     """
     # Get the text from the request arguments
+    if (!request.body || typeof request.body !== "object") {
+      return reply.code(400).send({ error: "Invalid request body" });
+    }
     text_to_analyze = request.args.get('textToAnalyze')
 
     # Call the emotion detector function
