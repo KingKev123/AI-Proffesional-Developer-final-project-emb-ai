@@ -12,36 +12,31 @@ import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 
-class StructuredLogger:
-    """Structured JSON logger for production observability."""
+class JSONFormatter(logging.Formatter):
+    """JSON formatter for structured logging."""
     
-    def __init__(self, name):
-        self.logger = logging.getLogger(name)
-        self.logger.setLevel(logging.INFO)
-        
-        handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter('%(message)s'))
-        self.logger.addHandler(handler)
-    
-    def _log(self, level, message, **context):
+    def format(self, record):
         log_entry = {
-            'level': level,
-            'message': message,
-            **context
+            'level': record.levelname.lower(),
+            'message': record.getMessage(),
+            'timestamp': self.formatTime(record, self.datefmt)
         }
-        getattr(self.logger, level)(json.dumps(log_entry))
-    
-    def info(self, message, **context):
-        self._log('info', message, **context)
-    
-    def error(self, message, **context):
-        self._log('error', message, **context)
-    
-    def warning(self, message, **context):
-        self._log('warning', message, **context)
+        if hasattr(record, 'context'):
+            log_entry.update(record.context)
+        return json.dumps(log_entry)
 
 
-logger = StructuredLogger('emotion-detection')
+logger = logging.getLogger('emotion-detection')
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+handler.setFormatter(JSONFormatter())
+logger.addHandler(handler)
+
+
+def log_with_context(level, message, **context):
+    """Helper to log with context."""
+    extra = {'context': context} if context else {}
+    getattr(logger, level)(message, extra=extra)
 
 sentry_sdk.init(
     // Health check endpoint
@@ -81,7 +76,7 @@ def render_index_page():
     Returns:
         str: Rendered HTML template for the index page
     """
-    logger.info('Rendering index page')
+    log_with_context('info', 'Rendering index page')
     return render_template('index.html')
 
 
@@ -101,15 +96,15 @@ def emotion_detector_app():
     }
     text_to_analyze = request.args.get('textToAnalyze')
     
-    logger.info('Emotion detection request received', text_length=len(text_to_analyze) if text_to_analyze else 0)
+    log_with_context('info', 'Emotion detection request received', text_length=len(text_to_analyze) if text_to_analyze else 0)
 
     response = emotion_detector(text_to_analyze)
 
     if response['dominant_emotion'] is None:
-        logger.warning('Invalid text provided for emotion detection', text=text_to_analyze)
+        log_with_context('warning', 'Invalid text provided for emotion detection', text=text_to_analyze)
         return "Invalid text! Please try again!"
 
-    logger.info('Emotion detection completed', dominant_emotion=response['dominant_emotion'])
+    log_with_context('info', 'Emotion detection completed', dominant_emotion=response['dominant_emotion'])
     
     formatted_response = (
         f"For the given statement, the system response is "
@@ -125,7 +120,7 @@ def emotion_detector_app():
 @app.errorhandler(Exception)
 def handle_exception(e):
     """Capture unhandled exceptions in Sentry."""
-    logger.error('Unhandled exception occurred', error=str(e), error_type=type(e).__name__)
+    log_with_context('error', 'Unhandled exception occurred', error=str(e), error_type=type(e).__name__)
     sentry_sdk.capture_exception(e)
     return "An error occurred. Our team has been notified.", 500
 
@@ -151,10 +146,10 @@ if __name__ == "__main__":
     def shutdown_handler(signum, frame):
         """Handle graceful shutdown on SIGTERM and SIGINT."""
         sig_name = 'SIGTERM' if signum == signal.SIGTERM else 'SIGINT'
-        logger.info('Shutdown signal received', signal=sig_name)
+        log_with_context('info', 'Shutdown signal received', signal=sig_name)
         
         def force_exit():
-            logger.error('Forcing shutdown after timeout')
+            log_with_context('error', 'Forcing shutdown after timeout')
             os._exit(1)
         
         timer = threading.Timer(30.0, force_exit)
@@ -166,5 +161,5 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, shutdown_handler)
     signal.signal(signal.SIGINT, shutdown_handler)
     
-    logger.info('Starting Flask application', port=port, debug=debug_mode, environment='production' if is_production else 'development')
+    log_with_context('info', 'Starting Flask application', port=port, debug=debug_mode, environment='production' if is_production else 'development')
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
